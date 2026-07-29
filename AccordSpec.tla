@@ -341,13 +341,13 @@ RecoverComputations(s, p, id) ==
     LET D == IF phase[s][p][id] \notin { InitialPhase, PreAcceptedPhase } THEN dep[s][p][id]
                 ELSE dep[s][p][id] \cup { id2 \in NonBottomPayloadIds(s, p) : (Conflicts(id, id2) /\ LessThanTs(initTimestamp[id2], initTimestamp[id])) }
     IN
-    LET S == { id2 \in SeenIds(s, p) : (id2 # id /\ Conflicts(id, id2) /\ txn[s][p][id2] # Nop /\ id \notin dep[s][p][id2]
+    LET S == { id2 \in Id : (id2 # id /\ Conflicts(id, id2) /\ txn[s][p][id2] # Nop /\ id \notin dep[s][p][id2]
              /\(   (phase[s][p][id2] \in { CommittedPhase, StablePhase } /\ LessThanTs(initTimestamp[id], ts[s][p][id2]))  
                 \/ (   phase[s][p][id2] = AcceptedPhase   /\   LessThanTs( initTimestamp[id] , initTimestamp[id2])) 
                 )                    ) 
              }
         W == { <<id3, abal[s][p][id3]>> : 
-                    id3 \in { id2 \in SeenIds(s, p) :
+                    id3 \in { id2 \in Id :
                                 (id2 # id /\ Conflicts(id, id2) /\ txn[s][p][id2] # Nop 
                                 /\ ((phase[s][p][id2] = AcceptedPhase /\ LessThanTs(initTimestamp[id2], initTimestamp[id]) /\ LessThanTs(initTimestamp[id], ts[s][p][id2]))
                                       \/ (phase[s][p][id2] \in { InitialPhase, PreAcceptedPhase, FastAcceptedPhase } /\ LessThanTs(initTimestamp[id2], initTimestamp[id]) /\ txn[s][p][id2] # Bottom )
@@ -355,7 +355,7 @@ RecoverComputations(s, p, id) ==
                                 )
                             }
              }
-        WP == { id2 \in SeenIds(s, p) : id2 # id /\ Conflicts(id, id2) /\ phase[s][p][id2] \in { PreAcceptedPhase, FastAcceptedPhase } 
+        WP == { id2 \in Id : id2 # id /\ Conflicts(id, id2) /\ phase[s][p][id2] \in { PreAcceptedPhase, FastAcceptedPhase } 
                                                  /\ LessThanTs(initTimestamp[id], initTimestamp[id2]) /\ id \notin dep[s][p][id2] 
               }
     IN
