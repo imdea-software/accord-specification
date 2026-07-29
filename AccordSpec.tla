@@ -375,6 +375,7 @@ ApplyRecover(sp, p, b, id, tx) ==
 Submit(s, p, id) ==
     /\  id \notin submitted
     /\  s \in idToShard[id] 
+    \* all initial coordinators have the same number, in different shards. This is just an arbitrary choice.
     /\  LET initCoordsVal == { [proc |-> p, shard |-> shard] : shard \in idToShard[id]}
         IN
         /\  initTimestamp' = [initTimestamp EXCEPT ![id] = [id |-> <<s, p>>, t |-> initTimestamp[id].t]]
