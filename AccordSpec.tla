@@ -159,7 +159,7 @@ VARIABLES
 
     executed,           \* executed[s][p] = the set of executed transactions by (s, p)
     executeWaitingFlag, \* flag to know when a process has already started executing id.
-    relation,           \* this is the < relation over transactions to check acyclicity
+    relation           \* this is the < relation over transactions to check acyclicity
 
 
 vars == << bal, phase, txn, dep, depPlus, ts, abal, msgs, submitted, initTimestamp, initCoords, initCoord, recovered, Wvar, postWaitingFlag, recoveryAttemptBal, TXvar, Dvar, Qvar, executed, executeWaitingFlag, relation >>
@@ -243,6 +243,10 @@ SeenIds(s, p) ==
         \/ initCoord[id] = [proc |-> p, shard |-> s]
     }
 
+\* Set computation of all commands that have a non initial payload.
+NonBottomPayloadIds(s, p) ==
+    { id \in Id : txn[s][p][id] # Bottom }
+
 initCoordInQuorum(id, Q) ==
     \E coord \in initCoords[id] :
         coord \in Q
@@ -269,8 +273,9 @@ InitPartitionCoordsSubsetQ(id, quorumOfMessages) ==
 \*        - send PreAcceptOk(id, t, D) to ourselves.
 
 PreAcceptComputations(s, p, sq, q, id, initTs) ==
-    LET setOfConflictingTs == { ts[s][p][id2] : id2 \in { id2 \in Id : ts[s][p][id2].id # <<0, NoProc>> /\ Conflicts(id, id2)} }
-        D == { id2 \in SeenIds(s, p) : (Conflicts(id, id2) /\ LessThanTs(initTimestamp[id2], initTs)) }
+    LET setOfConflictingTs == { IF ts[s][p][id2].id # <<0, NoProc>> THEN ts[s][p][id2] ELSE initTimestamp[id2] 
+                                        : id2 \in { id2 \in NonBottomPayloadIds(s, p) : Conflicts(id, id2)} }
+        D == { id2 \in NonBottomPayloadIds(s, p) : (Conflicts(id, id2) /\ LessThanTs(initTimestamp[id2], initTs)) }
     IN
     LET tval == IF setOfConflictingTs = {} THEN 0 ELSE MaxTsInSet(setOfConflictingTs).t + 1
     IN
@@ -287,7 +292,7 @@ ApplyPreAccept(sp, p, id, tx, finalTs, D0) ==
     /\  dep'   = [dep   EXCEPT ![sp][p][id] = D0]
 
 AcceptComputations(s, p, id, t) ==
-    LET Dq == IF t = initTimestamp[id] THEN {} ELSE { id2 \in SeenIds(s, p) : (Conflicts(id, id2) /\ LessThanTs(initTimestamp[id2], t)) }
+    LET Dq == IF t = initTimestamp[id] THEN {} ELSE { id2 \in NonBottomPayloadIds(s, p) : (Conflicts(id, id2) /\ LessThanTs(initTimestamp[id2], t)) }
     IN
     [Dq |-> Dq] 
 
@@ -334,7 +339,7 @@ ApplyStable(sp, p, b, id) ==
 
 RecoverComputations(s, p, id) ==
     LET D == IF phase[s][p][id] \notin { InitialPhase, PreAcceptedPhase } THEN dep[s][p][id]
-                ELSE dep[s][p][id] \cup { id2 \in SeenIds(s, p) : (Conflicts(id, id2) /\ LessThanTs(initTimestamp[id2], initTimestamp[id])) }
+                ELSE dep[s][p][id] \cup { id2 \in NonBottomPayloadIds(s, p) : (Conflicts(id, id2) /\ LessThanTs(initTimestamp[id2], initTimestamp[id])) }
     IN
     LET S == { id2 \in SeenIds(s, p) : (id2 # id /\ Conflicts(id, id2) /\ txn[s][p][id2] # Nop /\ id \notin dep[s][p][id2]
              /\(   (phase[s][p][id2] \in { CommittedPhase, StablePhase } /\ LessThanTs(initTimestamp[id], ts[s][p][id2]))  
