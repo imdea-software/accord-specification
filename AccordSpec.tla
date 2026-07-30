@@ -321,7 +321,6 @@ ApplyFastAccept(sp, p, id, D) ==
 ApplyCommit(sp, p, b, id, t, D, DPlus, tx, stable) ==
     /\  bal[sp][p][id] = b
     /\  b = 0 => phase[sp][p][id] \in { PreAcceptedPhase, AcceptedPhase, FastAcceptedPhase }
-    /\  abal[sp][p][id] = b => phase[sp][p][id] # StablePhase
     /\  IF b > 0 THEN txn'  = [txn  EXCEPT ![sp][p][id] = tx] ELSE UNCHANGED txn
     /\  abal'       = [abal   EXCEPT ![sp][p][id] = b]
     /\  ts'         = [ts     EXCEPT ![sp][p][id] = t]
