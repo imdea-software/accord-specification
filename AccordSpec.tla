@@ -26,7 +26,7 @@ Author: Alexandre SIRET
 
 CONSTANTS
     Shards,     \* The set of shards 
-    Proc,       \* The set of processes, all shards use same numbered processes
+    Proc,       \* The set of processes used in every shard, all shards use same numbered processes
     Id,         \* The set of command IDs
     F,         
     E,
@@ -133,6 +133,7 @@ ApplyMsg(sp, p, sq, q, id) ==
 (***************************************************************************)
 
 VARIABLES
+    \* The following arrays are index by s and p because every individual process is indexed by a shard and process pair.
     bal,           \* bal[s][p][id] = current ballot known by process p in shard s for transaction id
     phase,         \* phase[s][p][id] \in { InitialPhase, PreAcceptedPhase, AcceptedPhase, CommittedPhase, StablePhase }
     txn,           \* txn[s][p][id] = command payload at (s, p)
@@ -186,7 +187,7 @@ Init ==
     /\ Dvar = [s \in Shards |-> [p \in Proc |-> [id \in Id |-> {}]]]
     /\ postWaitingFlag = [s \in Shards |-> [p \in Proc |-> [id \in Id |-> FALSE]]]
     /\ recoveryAttemptBal = [s \in Shards |-> [p \in Proc |-> [id \in Id |-> 0]]]
-    /\ initTimestamp = initTimestampConstant
+    /\ initTimestamp = initTimestampConstantArray
     /\ Qvar = [s \in Shards |-> [p \in Proc |-> [id \in Id |-> {}]]]
     /\ executed = [s \in Shards |-> [p \in Proc |-> {} ]]
     /\ executeWaitingFlag =  [s \in Shards |-> [p \in Proc |-> [id \in Id |-> FALSE]]]
@@ -292,7 +293,7 @@ ApplyPreAccept(sp, p, id, tx, finalTs, D0) ==
     /\  dep'   = [dep   EXCEPT ![sp][p][id] = D0]
 
 AcceptComputations(s, p, id, t) ==
-    LET Dq == IF t = initTimestamp[id] THEN {} ELSE { id2 \in NonBottomPayloadIds(s, p) : (Conflicts(id, id2) /\ LessThanTs(initTimestamp[id2], t)) }
+    LET Dq == { id2 \in NonBottomPayloadIds(s, p) : (Conflicts(id, id2) /\ LessThanTs(initTimestamp[id2], t)) }
     IN
     [Dq |-> Dq] 
 
@@ -766,7 +767,8 @@ HandlePostWaiting(s, p, id) ==
                 \E w \in W :
                     LET id1 == w[1]
                         bal1 == w[2]
-                    IN 
+                    IN
+                    \* If id1 not in the shard s, go find a shard in the intersection. and check that on one of this process. 
                     /\  phase[s][p][id1] \in { CommittedPhase, StablePhase }
                     /\  abal[s][p][id1] >= bal1
                     /\  txn[s][p][id1] # Nop
