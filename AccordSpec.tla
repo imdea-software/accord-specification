@@ -898,7 +898,7 @@ HandleReadOk(s, p, id) ==
         /\  relation' =
                 [id1 \in Id |->
                     [id2 \in Id |->
-                        IF id1 = id /\ id2 \notin submitted THEN TRUE
+                        IF id1 = id /\ id2 \notin submitted /\ txn[s][p][id] # Nop THEN TRUE
                         ELSE relation[id1][id2]
                     ]
                 ]
@@ -921,7 +921,7 @@ HandleApply(m) ==
         /\  relation' =
                 [id1 \in Id |->
                     [id2 \in Id |->
-                        IF id2 = id /\ Conflicts(id1, id) /\ id1 \in executed[s][p]
+                        IF id2 = id /\ Conflicts(id1, id) /\ id1 \in executed[s][p] /\ txn[s][p][id1] # Nop /\ txn[s][p][id2] # Nop
                         THEN TRUE
                         ELSE relation[id1][id2]
                     ]
