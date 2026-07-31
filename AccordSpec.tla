@@ -233,7 +233,7 @@ SeenIds(s, p) ==
     { id \in Id : 
         \/ txn[s][p][id] # Bottom
         \/ \E id2 \in Id : id \in dep[s][p][id2] \/ id \in depPlus[s][p][id2]
-        \/ bal[s][p][id] # 0         \/ initCoord[id] = [shard |-> s, proc |-> p]
+        \/ bal[s][p][id] # 0 
     }
 
 \* Set computation of all commands that have a non initial payload.
