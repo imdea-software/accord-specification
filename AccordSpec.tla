@@ -863,7 +863,6 @@ StartExecute(s, p, id) ==
     /\  s \in idToShard[id]
     /\  initCoords[id][s].proc = p
     /\  phase[s][p][id] = StablePhase
-    /\  txn[s][p][id] # Nop
     /\  executeWaitingFlag[s][p][id] = FALSE
     /\  msgs' = msgs \cup { ReadMsg(s, p, sq, p, id) : sq \in idToShard[id] }
     /\  executeWaitingFlag' = [executeWaitingFlag EXCEPT ![s][p][id] = TRUE]
