@@ -359,7 +359,7 @@ ApplyRecover(sp, p, b, id, tx) ==
 (* Message handling Actions                                                *)
 (***************************************************************************)
 
-(* Submit (lines 1-3) *)
+(* Submit (lines 1-5) *)
 
 Submit(s, p, id) ==
     /\  id \notin submitted
@@ -373,6 +373,8 @@ Submit(s, p, id) ==
         /\  initCoord' = [initCoord EXCEPT ![id] = [shard |-> s, proc |-> p]]
         /\  msgs' = msgs \cup { SubmitMsg(s, p, shard, initCoordsVal[shard].proc, id) : shard \in idToShard[id] }
     /\  UNCHANGED <<bal, abal, txn, phase, ts, dep, depPlus, recovered, Wvar, postWaitingFlag, recoveryAttemptBal, TXvar, Dvar, Qvar, executed, executeWaitingFlag, relation>> 
+
+(* Submit (lines 6-7) *)
 
 HandleSubmit(m) ==
     /\  m.type = TypeSubmit
@@ -390,7 +392,7 @@ HandleSubmit(m) ==
                                      \cup { PreAcceptOKMsg(s, p, sq, q, id, computations.finalTs, computations.D) }  
     /\  UNCHANGED <<initTimestamp, submitted, initCoords, initCoord, depPlus, bal, abal, recovered, Wvar, postWaitingFlag, recoveryAttemptBal, TXvar, Dvar, Qvar, executed, executeWaitingFlag, relation>> 
 
-(* HandlePreAccept (lines 4-12) *)
+(* HandlePreAccept (lines 8-16) *)
                    
 HandlePreAccept(m) ==
     /\  m.type = TypePreAccept
@@ -409,7 +411,7 @@ HandlePreAccept(m) ==
     /\  UNCHANGED <<bal, abal, submitted, initCoords, initCoord, depPlus, recovered, postWaitingFlag, recoveryAttemptBal, TXvar, Dvar, Wvar, Qvar, executed, executeWaitingFlag, relation, initTimestamp>>
 
 
-(* HandlePreAcceptOk (lines 13-18) *)
+(* HandlePreAcceptOk (lines 17-24) *)
 
 HandlePreAcceptOK(s, p, id) ==
     /\  bal[s][p][id] = 0
@@ -444,8 +446,9 @@ HandlePreAcceptOK(s, p, id) ==
                     /\  msgs' = (msgs \ quorumOfMessages) \cup { AcceptMsg(s, p, to[1], to[2], 0, id, t, D, txn[s][p][id]) : to \in { <<sq, q>> : sq \in idToShard[id], q \in Proc } \ { <<s, p>> } } 
                                                           \cup { AcceptOKMsg(s, p, s, p, 0, id, computations.Dq) }
     /\  UNCHANGED <<submitted, initCoords, initCoord, recovered, depPlus, Wvar, postWaitingFlag, recoveryAttemptBal, TXvar, Dvar, initTimestamp, Qvar, executed, executeWaitingFlag, relation>>
-       
 
+                     
+(* HandleFastAccept (lines 25-28) *)
                     
 HandleFastAccept(m) ==
     /\  m.type = TypeFastAccept
@@ -459,6 +462,8 @@ HandleFastAccept(m) ==
         /\  ApplyFastAccept(s, p, id, D)
         /\  msgs' = (msgs \ {m}) \cup { FastAcceptOKMsg(s, p, sq, q, id) }
     /\  UNCHANGED <<bal, abal, txn, submitted, initCoords, depPlus, initCoord, recovered, Wvar, postWaitingFlag, recoveryAttemptBal, TXvar, Dvar, initTimestamp, Qvar, executed, executeWaitingFlag, relation>>
+
+(* HandleFastAcceptOK (lines 29-31) *)
 
 HandleFastAcceptOK(s, p, id) ==
     /\  phase[s][p][id] \in { PreAcceptedPhase, FastAcceptedPhase }
@@ -478,7 +483,7 @@ HandleFastAcceptOK(s, p, id) ==
                                             \cup { StableMsg(s, p, to[1], to[2], bal[s][p][id], id) : to \in { <<sq, q>> : sq \in idToShard[id], q \in Proc } \ { <<s, p>> } }
     /\  UNCHANGED <<submitted, bal, initTimestamp, initCoords, initCoord, recovered, Wvar, postWaitingFlag, recoveryAttemptBal, TXvar, Dvar, Qvar, executed, executeWaitingFlag, relation>>
 
-(* HandleAccept (lines 19-27) *)
+(* HandleAccept (lines 32-37) *)
                            
 HandleAccept(m) ==
     /\  m.type = TypeAccept
@@ -499,7 +504,7 @@ HandleAccept(m) ==
     /\  UNCHANGED <<submitted, initCoords, initCoord, depPlus, recovered, Wvar, postWaitingFlag, recoveryAttemptBal, TXvar, Dvar, initTimestamp, Qvar, executed, executeWaitingFlag, relation>>
 
 
-(* HandleAcceptOk (lines 28-30) *)
+(* HandleAcceptOk (lines 38-41) *)
 
 HandleAcceptOK(s, p, id) ==
     /\  phase[s][p][id] = AcceptedPhase
@@ -526,7 +531,7 @@ HandleAcceptOK(s, p, id) ==
     /\  UNCHANGED <<bal, submitted, initCoords, initCoord, recovered, Wvar, postWaitingFlag, recoveryAttemptBal, TXvar, Dvar, initTimestamp, Qvar, executed, executeWaitingFlag, relation>>
 
 
-(* HandleCommit (lines 31-38) *)
+(* HandleCommit (lines 42-47) *)
 
 HandleCommit(m) ==
     /\  m.type = TypeCommit
@@ -548,7 +553,7 @@ HandleCommit(m) ==
     /\  UNCHANGED <<bal, submitted, initCoords, initCoord, recovered, Wvar, postWaitingFlag, recoveryAttemptBal, TXvar, Dvar, Qvar, executed, executeWaitingFlag, relation, initTimestamp>>
 
 
-(* HandleCommitOk (lines 42-44) *)
+(* HandleCommitOk (lines 51-53) *)
 
 HandleCommitOK(s, p, id) ==
     /\  phase[s][p][id] = CommittedPhase
@@ -566,7 +571,7 @@ HandleCommitOK(s, p, id) ==
         /\  msgs' = (msgs \ quorumOfMessages) \cup { StableMsg(s, p, to[1], to[2], bal[s][p][id], id) : to \in { <<sq, q>> : sq \in idToShard[id], q \in Proc } \ { <<s, p>> } }
     /\  UNCHANGED <<bal, txn, dep, depPlus, ts, abal, submitted, initCoords, initCoord, recovered, Wvar, postWaitingFlag, recoveryAttemptBal, TXvar, Dvar, initTimestamp, Qvar, executed, executeWaitingFlag, relation>>
 
-(* HandleStable (lines 39-41) *)
+(* HandleStable (lines 48-50) *)
 
 HandleStable(m) ==
     /\  m.type = TypeStable
@@ -582,7 +587,7 @@ HandleStable(m) ==
         /\  UNCHANGED <<bal, submitted, initCoords, initCoord, dep, depPlus, abal, txn, ts, recovered, Wvar, postWaitingFlag, recoveryAttemptBal, TXvar, Dvar, initTimestamp, Qvar, executed, executeWaitingFlag, relation>>
 
 
-(* StartRecover (lines 45-48) *)
+(* StartRecover (lines 54-57) *)
 
 StartRecover(s, p, id) ==
     /\  recovered[s][p][id] < NumberOfRecoveryAttempts
@@ -613,7 +618,7 @@ StartRecover(s, p, id) ==
 /\ UNCHANGED <<phase, dep, depPlus, ts, abal, submitted, initCoords, initCoord, Wvar, TXvar, Dvar, initTimestamp, Qvar, executed, executeWaitingFlag, relation,  recoveryAttemptBal>>
 
 
-(* HandleRecover (lines 49-60) *)
+(* HandleRecover (lines 58-70) *)
 
 HandleRecover(m) ==
     /\  m.type = TypeRecover
@@ -639,7 +644,7 @@ HandleRecover(m) ==
     /\  UNCHANGED <<submitted, initCoords, initCoord, dep, depPlus, abal, ts, phase, recovered, TXvar, Dvar, postWaitingFlag, Wvar, recoveryAttemptBal, initTimestamp, Qvar, executed, executeWaitingFlag, relation>>
 
 
-(* HandleRecoverOK (lines 61-79 + 90-91) *)
+(* HandleRecoverOK (lines 71-90 + 100-101) *)
 
 HandleRecoverOK(s, p, id) ==
     /\  LET quorumOfMessages ==
@@ -738,13 +743,13 @@ HandleRecoverOK(s, p, id) ==
                     LET computations == AcceptComputations(s, p, id, initTimestamp[id])
                     IN 
                     /\  ApplyAccept(s, p, bal[s][p][id], id, initTimestamp[id], dep[s][p][id], Nop)
-                    /\  msgs' =   (msgs \ quorumOfMessages)  \cup { AcceptMsg(s, p, to[1], to[2], bal[s][p][id], id, initTimestamp[id], dep[s][p][id], Nop) : to \in { <<sq, q>> : sq \in idToShard[id], q \in Proc } \ { <<s, p>> } } 
+                    /\  msgs' =   (msgs \ quorumOfMessages)  \cup { AcceptMsg(s, p, to[1], to[2], bal[s][p][id], id, initTimestamp[id], {}, Nop) : to \in { <<sq, q>> : sq \in idToShard[id], q \in Proc } \ { <<s, p>> } } 
                                                              \cup { AcceptOKMsg(s, p, s, p, bal[s][p][id], id, computations.Dq) } 
                     /\  UNCHANGED <<TXvar, Wvar, Dvar, depPlus, recoveryAttemptBal, postWaitingFlag, Qvar>>   
     /\  UNCHANGED <<submitted, initCoords, initCoord, recovered, initTimestamp, executed, executeWaitingFlag, relation>>
 
                  
-(* HandlePostWaiting (lines 80-89) *)
+(* HandlePostWaiting (lines 91-99) *)
                     
 HandlePostWaiting(s, p, id) ==
     /\  recoveryAttemptBal[s][p][id] = bal[s][p][id] \* I'm not getting the ballot of corresponding recovery attempt from messages here so I use this extra variable to check we havn't moved ballot.
@@ -790,7 +795,7 @@ HandlePostWaiting(s, p, id) ==
         \/  /\  Case1
             /\  LET computations == AcceptComputations(s, p, id, initTimestamp[id])
                 IN
-                /\  ApplyAccept(s, p, bal[s][p][id], id, initTimestamp[id], dep[s][p][id], Nop) 
+                /\  ApplyAccept(s, p, bal[s][p][id], id, initTimestamp[id], {}, Nop) 
                 /\  msgs' = msgs \cup { AcceptMsg(s, p, to[1], to[2], bal[s][p][id], id, initTimestamp[id], dep[s][p][id], Nop) : to \in { <<sq, q>> : sq \in idToShard[id], q \in Proc } \ { <<s, p>> } }
                                  \cup { AcceptOKMsg(s, p, s, p, bal[s][p][id], id, computations.Dq) }
                 /\  postWaitingFlag' = [postWaitingFlag EXCEPT ![s][p][id] = FALSE]
@@ -837,7 +842,7 @@ HandlePostWaiting(s, p, id) ==
                             LET computations == AcceptComputations(s, p, id, initTimestamp[id])
                             IN 
                             /\  ApplyAccept(s, p, bal[s][p][id], id, initTimestamp[id], dep[s][p][id], Nop)
-                            /\  msgs' = msgs \cup { AcceptMsg(s, p, to[1], to[2], bal[s][p][id], id, initTimestamp[id], dep[s][p][id], Nop) : to \in { <<sq, q>> : sq \in idToShard[id], q \in Proc } \ { <<s, p>> } } 
+                            /\  msgs' = msgs \cup { AcceptMsg(s, p, to[1], to[2], bal[s][p][id], id, initTimestamp[id], {}, Nop) : to \in { <<sq, q>> : sq \in idToShard[id], q \in Proc } \ { <<s, p>> } } 
                                              \cup { AcceptOKMsg(s, p, s, p, bal[s][p][id], id, computations.Dq) } 
                             /\  postWaitingFlag' = [postWaitingFlag EXCEPT ![s][p][id] = FALSE]
                             /\  UNCHANGED depPlus
