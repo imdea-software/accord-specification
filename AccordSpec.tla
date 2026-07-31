@@ -184,7 +184,7 @@ Init ==
     /\ Qvar = [s \in Shards |-> [p \in Proc |-> [id \in Id |-> {}]]]
     /\ executed = [s \in Shards |-> [p \in Proc |-> {} ]]
     /\ executeWaitingFlag =  [s \in Shards |-> [p \in Proc |-> [id \in Id |-> FALSE]]]
-    /\ relation = [id1 \in Id |-> [id2 \in Id |-> 0]]
+    /\ relation = [id1 \in Id |-> [id2 \in Id |-> FALSE]]
 
 
 (***************************************************************************)
@@ -889,14 +889,21 @@ HandleReadOk(s, p, id) ==
     /\  LET readOKs ==
             { m \in msgs :
                 /\  m.type = TypeReadOk
-                /\  m.to = p 
-                /\  m.body.id = id 
-                /\  m.shardto = s  
+                /\  m.to = p
+                /\  m.body.id = id
+                /\  m.shardto = s
             }
         IN
-        /\  Cardinality(readOKs) = Cardinality(idToShard[id]) \* check that we got answer from everyone.
+        /\  Cardinality(readOKs) = Cardinality(idToShard[id])
         /\  msgs' = (msgs \ readOKs) \cup { ApplyMsg(s, p, to[1], to[2], id) : to \in { <<sq, q>> : sq \in idToShard[id], q \in Proc } }
-    /\  UNCHANGED <<bal, phase, txn, dep, depPlus, ts, abal, submitted, initTimestamp, initCoords, initCoord, recovered, Wvar, postWaitingFlag, recoveryAttemptBal, TXvar, Dvar, Qvar, executed, executeWaitingFlag, relation>>
+        /\  relation' =
+                [id1 \in Id |->
+                    [id2 \in Id |->
+                        IF id1 = id /\ id2 \notin submitted THEN TRUE
+                        ELSE relation[id1][id2]
+                    ]
+                ]
+    /\  UNCHANGED <<bal, phase, txn, dep, depPlus, ts, abal, submitted, initTimestamp, initCoords, initCoord, recovered, Wvar, postWaitingFlag, recoveryAttemptBal, TXvar, Dvar, Qvar, executed, executeWaitingFlag>>
             
 (* HandleApply (lines 102-105) *)
 HandleApply(m) == 
@@ -913,13 +920,13 @@ HandleApply(m) ==
         /\  msgs' = msgs \ {m}
         /\  executed' = [executed EXCEPT ![s][p] = executed[s][p] \cup {id}]
         /\  relation' =
-            [id1 \in Id |-> 
-                [id2 \in Id |->
-                IF id1 = id /\ (Conflicts(id, id2) \/ id2 \notin submitted) /\ relation[id1][id2] = 0 THEN 1
-                ELSE IF id2 = id /\ (Conflicts(id1, id) \/ id1 \notin submitted) /\ relation[id1][id2] = 0 THEN 2
-                ELSE relation[id1][id2]
+                [id1 \in Id |->
+                    [id2 \in Id |->
+                        IF id2 = id /\ Conflicts(id1, id) /\ id1 \in executed[s][p]
+                        THEN TRUE
+                        ELSE relation[id1][id2]
+                    ]
                 ]
-            ]
     /\  UNCHANGED <<bal, phase, txn, dep, depPlus, ts, abal, submitted, initTimestamp, initCoords, initCoord, recovered, Wvar, postWaitingFlag, recoveryAttemptBal, TXvar, Dvar, Qvar, executeWaitingFlag>>
 
 (***************************************************************************)
@@ -945,7 +952,7 @@ Ordering ==
         =>  id2 \in dep[s][p][id1] \cup depPlus[s][p][id1]
 
 Edges ==
-    { <<i, j>> \in Id \X Id : relation[i][j] = 1 }
+    { <<i, j>> \in Id \X Id : relation[i][j] }
 
 RECURSIVE Reach(_,_)
 
