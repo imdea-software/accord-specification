@@ -460,7 +460,7 @@ HandleFastAccept(m) ==
             D  == m.body.D
         IN 
         /\  ApplyFastAccept(s, p, id, D)
-        /\  msgs' = (msgs \ {m}) \cup { FastAcceptOKMsg(s, p, sq, q, id) }
+        /\  msgs' = (msgs \ {m}) \cup { FastAcceptOKMsg(s, p, sq, q, id) } \*FastAcceptOKmsg does not have D as a param. In my model, the initial coordinator is one of the shard coordinators always, so the D is found in the dep variable of the initial coordinator, see HandleFastAcceptOK
     /\  UNCHANGED <<bal, abal, txn, submitted, initCoords, depPlus, initCoord, recovered, Wvar, postWaitingFlag, recoveryAttemptBal, TXvar, Dvar, initTimestamp, Qvar, executed, executeWaitingFlag, relation>>
 
 (* HandleFastAcceptOK (lines 29-31) *)
