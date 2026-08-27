@@ -8,7 +8,7 @@ idToShard == [i \in {1, 2, 3} |->
                   CASE i = 1 -> {1, 2}
                     [] i = 2 -> {1}
                     [] i = 3 -> {1, 2}]
-		   
+
 
 \* Conflict relation
 ConflictPairs == {
